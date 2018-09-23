@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,user-scalable=no">
+  <title>Juego</title>
+  <script src="https://code.jquery.com/jquery-3.1.0.min.js"
+integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s="
+crossorigin="anonymous">
+</script>
+  <link rel="stylesheet" href="css/estilos.css">
+  <script  src= "js/app.js" ></script>
+</head>
+
+
+
+<script type="text/javascript">
+
+
+
+
+// A 10x10 grid implemented with Javascript Array
+var rows=7;
+var cols = 7;
+var grid = [];
+
+var validFigures=0;
+var levelGoal = 0;
+var puntaje = 0;
+var movimientos = 0;
+var contador_boton_inicio = 0 ;
+var temporizador;
+
+/////////////////////////////////////////////
+/*
+function verificar_boton(){
+
+    var mensaje_boton1 = document.getElementById("mensaje_boton").innerHTML;
+    var valor = document.getElementById("nuevo").value;
+
+    alert('primera vez:' + contador_boton_inicio +'texto' + mensaje_boton1+ 'nuevo'+ valor );
+    var nuevo_mensaje = 'REINICIAR';
+    document.getElementById("mensaje_boton").innerHTML('');
+
+
+  contador_boton_inicio = contador_boton_inicio + 1;
+
+}//fin de la funcion 
+*/
+
+////////////////////////////////////////////
+
+
+// game object
+function jewel(r,c,obj,src)
+{
+return {
+r: r,
+c: c,
+src:src,
+locked:false,
+isInCombo:false,
+o:obj
+}
+}
+
+// dulces usados 
+var jewelsType=[];
+
+jewelsType[0]="image/1.png";
+jewelsType[1]="image/2.png";
+jewelsType[2]="image/3.png";
+jewelsType[3]="image/4.png";
+jewelsType[4]="image/1.png";
+jewelsType[5]="image/2.png";
+jewelsType[6]="image/3.png";
+// this function returs a random jewel.
+function pickRandomJewel()
+{
+var pickInt = Math.floor((Math.random()*7));
+//console.log("Picked " + pickInt);
+return jewelsType[pickInt];
+}
+
+
+function _initGame() {
+
+// prepare grid - Simply and fun!
+for (var r = 0; r < rows; r++)
+{
+grid[r]=[];
+for (var c =0; c< cols; c++) {
+grid[r][c]=new jewel(r,c,null,pickRandomJewel());
+}
+}
+_applyRectangleConstraint(1,1,1,1);
+
+// initial coordinates
+/*
+var width = $('body').width();
+var height = $('body').height();
+*/
+var width = $('.panel-tablero').width();
+var height = $('.panel-tablero').height();
+
+console.log("Game width: " + width);
+console.log("Game height: " + height);
+var cellWidth = width / (cols+1);
+var cellHeight = height / (rows+1);
+var marginWidth = cellWidth/cols;
+var marginHeight = cellHeight/rows;
+console.log("Jewels width: " + cellWidth);
+console.log("Jewels height: " + cellHeight);
+
+
+
+
+// draw the grid.
+for (var r = 0; r < rows; r++)
+{
+for (var c =0; c< cols; c++) {
+//console.log("add to: " + r*cellHeight + ", " + c*cellWidth);
+var cell = $("<img class='jewel' id='jewel_"+r+"_"+c+"' r='"+r+"' c='"+c+"' ondrop='_onDrop(event)' ondragover='_onDragOverEnabled(event)' src='"+grid[r][c].src+"' style='padding-right:20px;width:"+(cellWidth-20)+"px;height:"+cellHeight+"px;position:absolute;top:"+r*cellHeight+"px;left:"+(c*cellWidth+marginWidth)+"px'/>");
+cell.attr("ondragstart","_ondragstart(event)");
+$(".panel-tablero").append(cell);
+grid[r][c].o = cell;
+}
+}
+
+}
+
+function _ondragstart(a)
+{
+console.log("Moving jewel: " + a.target.id);
+a.dataTransfer.setData("text/plain", a.target.id);
+
+}
+function _onDragOverEnabled(e)
+{
+e.preventDefault();
+console.log("drag over " + e.target);
+
+}
+
+// apply grid constraint
+function _applyRectangleConstraint(u,d,l,r)
+{
+
+
+console.log("Locking cells");
+for(var i =0;i<u;i++) {
+for(c=0;c<cols;c++) {
+grid[i][c].locked=true;
+//grid[i][c].src="http://www.maison-nature.fr/images/akterre/ico_briques.png";
+grid[i][c].src="image/1.png";
+}
+}
+for(var i =0;i<d;i++) {
+for(c=0;c<cols;c++) {
+grid[(rows-i)-1][c].locked=true;
+grid[(rows-i)-1][c].src="image/2.png";
+
+}
+}
+for(var i =0;i<l;i++) {
+for(rX=0;rX<rows;rX++) {
+grid[rX][i].locked=true;
+grid[rX][i].src="image/3.png";
+
+}
+}
+for(var i =0;i<r;i++) {
+for(rX=0;rX<rows;rX++) {
+grid[rX][(cols-i)-1].locked=true;
+
+grid[rX][(cols-i)-1].src="image/4.png";
+
+}
+}
+}
+
+
+function _onDrop(e)
+{
+// only for firefox!
+var isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+if (isFirefox) {
+console.log("firefox compatibility");
+e.preventDefault();
+}
+console.log("ondrop" + e);
+var src = e.dataTransfer.getData("text");
+var sr = src.split("_")[1];
+var sc = src.split("_")[2];
+var dst = e.target.id;
+var dr = dst.split("_")[1];
+var dc = dst.split("_")[2];
+// check distance (max 1)
+var ddx = Math.abs(parseInt(sr)-parseInt(dr));
+var ddy = Math.abs(parseInt(sc)-parseInt(dc));
+if (ddx > 1 || ddy > 1)
+{
+console.log("invalid! distance > 1");
+return;
+}
+console.log("swap " + sr + "," + sc+ " to " + dr + "," + dc);
+movimientos = parseInt(movimientos)+1;
+$("#movimientos-text").text(movimientos);
+// execute swap
+var tmp = grid[sr][sc].src;
+grid[sr][sc].src = grid[dr][dc].src;
+grid[sr][sc].o.attr("src",grid[sr][sc].src);
+grid[dr][dc].src = tmp;
+grid[dr][dc].o.attr("src",grid[dr][dc].src);
+// search for combo
+_checkAndDestroy();
+}
+
+// check and destroy combination
+function _checkAndDestroy()
+{
+/**
+HORIZONTAL COMBO
+**/
+for (var r = 0; r < rows; r++)
+{
+var prevCell = null;
+var figureLen = 0;
+var figureStart = null;
+var figureStop = null;
+for (var c=0; c< cols; c++)
+{
+// bypass locked and jewels that partecipate to combo.
+//The next cell will become first cell of combo.
+if (grid[r][c].locked || grid[r][c].isInCombo)
+{
+figureStart = null;
+figureStop = null;
+prevCell = null;
+figureLen = 1;
+continue;
+}
+// first cell of combo!
+if (prevCell==null)
+{
+//console.log("FirstCell: " + r + "," + c);
+prevCell = grid[r][c].src;
+figureStart = c;
+figureLen = 1;
+figureStop = null;
+continue;
+}
+else
+{
+//second or more cell of combo.
+var curCell = grid[r][c].src;
+// if current cell is not equals to prev cell then current cell become new first cell!
+if (!(prevCell==curCell))
+{
+//console.log("New FirstCell: " + r + "," + c);
+prevCell = grid[r][c].src;
+figureStart = c;
+figureStop=null;
+figureLen = 1;
+continue;
+}
+else
+{
+// if current cell is equal to prevcell than combo lenght is increased
+// Due to combo, current combo will be destroyed at the end of this procedure.
+// Then, the next cell will become new first cell
+figureLen+=1;
+if (figureLen==3)
+{
+validFigures+=1;
+figureStop = c;
+console.log("Combo from " + figureStart + " to " + figureStop + "!");
+
+for (var ci=figureStart;ci<=figureStop;ci++)
+{
+  puntaje =  parseInt(puntaje)+10;
+$("#score-text").text(puntaje);
+grid[r][ci].isInCombo=true;
+grid[r][ci].src=null;
+//grid[r][ci].o.attr("src","");
+}
+prevCell=null;
+figureStart = null;
+figureStop = null;
+figureLen = 1;
+continue;
+}
+}
+}
+}
+}
+/**
+VERTICAL COMBO!
+**/
+for (var c=0; c< cols; c++)
+{
+var prevCell = null;
+var figureLen = 0;
+var figureStart = null;
+var figureStop = null;
+for (var r = 0; r < rows; r++)
+{
+// bypass locked and jewels that partecipate to combo.
+//The next cell will become first cell of combo.
+if (grid[r][c].locked || grid[r][c].isInCombo)
+{
+figureStart = null;
+figureStop = null;
+prevCell = null;
+figureLen = 1;
+continue;
+}
+// first cell of combo!
+if (prevCell==null)
+{
+//console.log("FirstCell: " + r + "," + c);
+prevCell = grid[r][c].src;
+figureStart = r;
+figureLen = 1;
+figureStop = null;
+continue;
+}
+else
+{
+//second or more cell of combo.
+var curCell = grid[r][c].src;
+// if current cell is not equals to prev cell then current cell become new first cell!
+if (!(prevCell==curCell))
+{
+
+//console.log("New FirstCell: " + r + "," + c);
+prevCell = grid[r][c].src;
+figureStart = r;
+figureStop=null;
+figureLen = 1;
+continue;
+}
+else
+{
+
+// if current cell is equal to prevcell than combo lenght is increased
+// Due to combo, current combo will be destroyed at the end of this procedure.
+// Then, the next cell will become new first cell
+figureLen+=1;
+if (figureLen==3)
+{
+validFigures+=1;
+figureStop = r;
+console.log("Combo from " + figureStart + " to " + figureStop + "!");
+
+for (var ci=figureStart;ci<=figureStop;ci++)
+{
+  puntaje =  parseInt(puntaje)+10;
+$("#score-text").text(puntaje);
+grid[ci][c].isInCombo=true;
+grid[ci][c].src=null;
+//grid[ci][c].o.attr("src","");
+}
+prevCell=null;
+figureStart = null;
+figureStop = null;
+figureLen = 1;
+continue;
+}
+}
+}
+}
+}
+// if there is combo then execute destroy
+var isCombo=false;
+for (var r = 0;r<rows;r++)
+for (var c=0;c<cols;c++)
+if (grid[r][c].isInCombo)
+{
+
+console.log("There are a combo");
+isCombo=true;
+
+}
+if (isCombo)
+_executeDestroy();
+else
+console.log("NO COMBO");
+
+}
+
+// execute the destroy fo cell
+function _executeDestroy()
+{
+for (var r=0;r<rows-1;r++)
+for (var c=0;c<cols-1;c++)
+if (grid[r][c].isInCombo) // this is an empty cell
+{
+grid[r][c].o.animate({
+opacity:0
+},500);
+}
+$(":animated").promise().done(function() {
+
+_executeDestroyMemory();
+
+
+});
+}
+function _executeDestroyMemory() {
+// move empty cells to top
+for (var r=0;r<rows-1;r++)
+{
+for (var c=0;c<cols-1;c++)
+{
+if (grid[r][c].isInCombo) // this is an empty cell
+{
+grid[r][c].o.attr("src","")
+// disable cell from combo.
+//(The cell at the end of this routine will be on the top)
+grid[r][c].isInCombo=false;
+for (var sr=r;sr>=0;sr--)
+{
+if (sr==0) break; // cannot shift. this is the first rows
+if (grid[sr-1][c].locked)
+break; // cannot shift. my top is locked
+// shift cell
+var tmp = grid[sr][c].src;
+grid[sr][c].src=grid[sr-1][c].src;
+grid[sr-1][c].src=tmp;
+}
+}
+}
+}
+
+//redrawing the grid
+// and setup respaw
+//Reset all cell
+for (var r=0;r<rows-1;r++)
+{ for (var c = 0;c<cols-1;c++)
+{
+grid[r][c].o.attr("src",grid[r][c].src);
+grid[r][c].o.css("opacity","1");
+grid[r][c].isInCombo=false;
+if (grid[r][c].src==null)
+grid[r][c].respawn=true;
+// if respawn is needed
+if (grid[r][c].respawn==true)
+{
+
+
+console.log("End of movement");
+grid[r][c].o.off("ondragover");
+grid[r][c].o.off("ondrop");
+grid[r][c].o.off("ondragstart");
+
+grid[r][c].respawn=false; // respawned!
+console.log("Respawning " + r+ "," + c);
+grid[r][c].src=pickRandomJewel();
+grid[r][c].locked=false;
+grid[r][c].o.attr("src",grid[r][c].src);
+grid[r][c].o.attr("ondragstart","_ondragstart(event)");
+grid[r][c].o.attr("ondrop","_onDrop(event)");
+grid[r][c].o.attr("ondragover","_onDragOverEnabled(event)");
+//grid[r][c].o.css("opacity","0.3");
+//grid[r][c].o.css("background-color","red");
+}
+}
+}
+console.log("Combo resetted and rewpawned");
+// check for other combos
+_checkAndDestroy();
+}
+////////////////////////
+
+$(document).ready(function(){
+
+$(".btn-reinicio").click(function(){
+
+
+  var mensaje = $(".btn-reinicio").text();
+  // alert('dasdsa'+mensaje+'contador'+contador_boton_inicio);
+  if(contador_boton_inicio==0){
+    $(".btn-reinicio").text('Reiniciar');
+  }
+   //iniciar las variables y lo que se muestra en pantalla
+        validFigures=0;
+         levelGoal = 0;
+         puntaje = 0;
+         movimientos = 0;
+         contador_boton_inicio = 0 ;
+ ////////////
+         $("#score-text").text(0);
+         $("#movimientos-text").text(0);
+          $("#timer").text('02:00');
+
+       /////////////////////////
+
+       clearInterval(temporizador); 
+       var minutos = 0;
+       var segundos = 119;
+       var segundos_mostrar;
+       ////////////////////////
+
+       //if (temporizador) { clearInterval(temporizador) }; 
+         temporizador = setInterval(function(){
+          segundos_mostrar = segundos;
+                   //alert(numero) 
+              if (segundos<120 && segundos >=60){minutos =1;
+                  segundos_mostrar  = segundos -60;
+                  if (segundos_mostrar < 10) {segundos_mostrar = '0'+segundos_mostrar;}
+              }
+
+              if (segundos<60 && segundos >0){minutos =0;}
+              if (segundos <10 ){segundos_mostrar = '0'+segundos_mostrar;}
+               var tiempo = minutos +':'+segundos_mostrar;  
+                   $("#timer").text(tiempo);
+                   segundos --;
+                   //verificar si sg = 0
+                   ///////////////////////////////
+                   if(segundos<0){
+                       clearInterval(temporizador); 
+                      //alert('tiempo_temrijasdofnaofkjfkoa');
+                      //$(".panel-tablero").css("display","none");
+                      $(".panel-tablero").fadeOut("3000","swing",function(){
+                        //alert('dasdasdasa');
+                        $(".time").css("display","none");
+                        $(".btn-reinicio").css("display","none");
+
+                        ///////////////////////
+                        $(".panel-score").animate(
+                        {
+                          width:"80%"
+                        },1000
+                          )
+                         /////////////////////
+                          $("#aviso_final").css("display","block");
+                        ///////////////////////
+                        /*
+                           $(this).animate(
+                                      {
+                                        top: "300px",
+                                        width: "-=50"
+                                      }, 1000, function(){
+                                        $(this).animate(
+                                          {
+                                            top: "+=100px"
+                                          }, 1000
+                                        )
+                              });
+                            */  
+                        ///////////////////////
+                      });//fin de la funcion de fadeOut
+
+
+        
+                   }
+                    //////////////////////////////
+                  },1000);  
+       ////////////////////////////
+
+////////////////////////
+  contador_boton_inicio ++;
+
+});//fin $(".btn-reinicio")
+
+});//fin de funcion principal
+
+</script>
+
+
+
+
+
+
+
+<body>
+  <div class="main-container">
+    <h1 class="main-titulo">Match Game</h1>
+
+
+    <div class="panel-tablero"  >
+        <script>
+        _initGame();
+        </script>
+    </div>
+
+    <div class="panel-score">
+      <h1 id="aviso_final">JUEGO TERMINADO</h1>
+
+      <div class="score">
+        <h2 class="data-titulo">Puntuación</h2>
+        <span class="data-info" id="score-text">0</span>
+      </div>
+
+      <div class="moves">
+        <h2 class="data-titulo">Movimientos</h2>
+        <span class="data-info" id="movimientos-text">0</span>
+      </div>
+
+      <div class="time">
+        <h2 class="data-titulo">Tiempo</h2>
+        <div class="data-info" id="timer">02:00</div>
+      </div>
+
+      <div class="buttons">
+        <button class="btn-reinicio" >Iniciar</button>
+      </div>
+    </div>
+
+  </div>
+<!--onclick="verificar_boton();"-->
+
+
+
+<!--
+  <script src="js/jquery-3.0.0.js" type="text/javascript"></script>
+  <script type="text/javascript" src="js/jquery-ui.min.js"></script>
+  <script src="js/timer.js" type="text/javascript"></script>
+  <script type="text/javascript" src="js/app.js"></script>
+-->
+
+</body>
+</html>
+
+
